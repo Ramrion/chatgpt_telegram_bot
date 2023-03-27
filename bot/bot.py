@@ -7,6 +7,7 @@ import tempfile
 import pydub
 from pathlib import Path
 from datetime import datetime
+from random import sample
 
 import telegram
 from telegram import Update, User, InlineKeyboardButton, InlineKeyboardMarkup
@@ -16,6 +17,7 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     CallbackQueryHandler,
+    ConversationHandler,
     filters
 )
 from telegram.constants import ParseMode, ChatAction
@@ -299,6 +301,17 @@ async def error_handle(update: Update, context: CallbackContext) -> None:
     except:
         await context.bot.send_message(update.effective_chat.id, "Some error in error handler")
 
+async def generate_english_words_handle(update: Update, context: CallbackContext) -> None:
+    await register_user_if_not_exists(update, context, update.message.from_user)
+
+    data_dir = Path(__file__).parent.parent.resolve() / "data"
+    # Practice new words from existing collection
+    with open(data_dir / 'words_to_learn.txt', 'r') as f:
+        words_to_learn = f.readlines()
+
+    message=f"Student: I want to practice these words: {', '.join(sample(words_to_learn, 4))}"
+    await message_handle(update, context, message=message)
+
 def run_bot() -> None:
     application = (
         ApplicationBuilder()
@@ -327,7 +340,8 @@ def run_bot() -> None:
     application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
 
     application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
-    
+    application.add_handler(CommandHandler("generate_words", generate_english_words_handle, filters=user_filter))
+
     application.add_error_handler(error_handle)
     
     # start the bot
